@@ -38,6 +38,9 @@ export CLIMA_NAME_CUDA_KERNELS_FROM_STACK_TRACE=true
 # reproducibility
 export JULIA_LOAD_PATH=@:@stdlib
 
+# Make sure we will use the local packages
+julia scripts/instantiate_clima_earth.jl
+
 # Instantiate julia environment, precompile, and build CUDA
 julia --project=$PROJECT_DIR -e 'using Pkg; Pkg.instantiate(;verbose=true); Pkg.precompile(;strict=true); Pkg.status()'
 
