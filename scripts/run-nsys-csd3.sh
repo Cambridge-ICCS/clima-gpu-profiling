@@ -1,13 +1,12 @@
 #!/bin/bash
-
-set -euo pipefail
-
 #SBATCH -J dycore-nsys
 #SBATCH -A ICCS-SL2-GPU
 #SBATCH -p ampere
 #SBATCH --nodes=1
 #SBATCH --gres=gpu:1
 #SBATCH --time=01:00:00
+
+set -euo pipefail
 
 CLIMA_COUPLER=ClimaCoupler.jl
 RUN_NAME=baseline
@@ -28,8 +27,6 @@ module load rhel8/cclake/base
 module load julia/1.11.4
 module load cuda/12.1
 
-# Downgrade the CUDA version used by julia to match the version on CSD3
-julia --project=$PROJECT_DIR -e 'using CUDA; CUDA.set_runtime_version!(v"12.1")'
 # Fix the bug in nsys with julia
 LD_LIBRARY_PATH=$(julia --startup-file=no -e 'println(joinpath(Sys.BINDIR, Base.LIBDIR, "julia"))'):$LD_LIBRARY_PATH
 
@@ -42,7 +39,10 @@ export CLIMA_NAME_CUDA_KERNELS_FROM_STACK_TRACE=true
 export JULIA_LOAD_PATH=@:@stdlib
 
 # Instantiate julia environment, precompile, and build CUDA
-julia --project=$PROJECT_DIR -e 'using Pkg; Pkg.instantiate(;verbose=true); Pkg.precompile(;strict=true); using CUDA; CUDA.precompile_runtime(); Pkg.status()'
+julia --project=$PROJECT_DIR -e 'using Pkg; Pkg.instantiate(;verbose=true); Pkg.precompile(;strict=true); Pkg.status()'
+
+# Downgrade the CUDA version used by julia to match the version on CSD3
+julia --project=$PROJECT_DIR -e 'using CUDA; CUDA.set_runtime_version!(v"12.1")'
 
 nsys profile \
     --capture-range=cudaProfilerApi \
