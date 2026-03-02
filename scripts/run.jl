@@ -12,7 +12,7 @@ include(joinpath(project_dir, "setup_run.jl"))
 # longrun_configs/amip_edonly_integrated_land.yml
 # For the bucket model, use:
 # longrun_configs/amip_edonly.yml
-config_file = Input.parse_commandline(Input.argparse_settings())["config_file"]
+config_file = parse_commandline(argparse_settings())["config_file"]
 
 # Set up and run the coupled simulation
 cs = CoupledSimulation(config_file)
@@ -21,7 +21,7 @@ cs = CoupledSimulation(config_file)
 step!(cs)
 
 # Now profile
-n_steps = 3
+n_steps = 1
 use_external_profiler = CUDA.Profile.detect_cupti()
 if use_external_profiler
     @info "Using external CUDA profiler"
