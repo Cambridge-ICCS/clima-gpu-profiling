@@ -24,10 +24,7 @@ include(joinpath(clima_core_path, "test", "MatrixFields", "matrix_field_test_uti
 
 # Generate extruded finite difference spaces for testing. Include topography
 # when possible.
-function test_spaces(::Type{FT}) where {FT}
-    velem = 63 # This should be big enough to test high-bandwidth matrices.
-    helem = 16
-    npoly = 3 # These should be small enough for the tests to be fast.
+function test_spaces(::Type{FT}; velem = 63, helem = 16, npoly = 3) where {FT}
 
     comms_ctx = ClimaComms.SingletonCommsContext(comms_device)
     hdomain = Domains.SphereDomain(FT(10))
@@ -180,9 +177,18 @@ function test_field_matrix_solver(; test_name, alg, A, b, use_rel_error = false)
     # end
 end
 
+#############################################################
+# Benchmarking of tridiagonal matrix solver
+
+
 # @testset "FieldMatrixSolver Unit Tests" begin
 FT = Float64
-center_space, face_space = test_spaces(FT)
+
+velem = 63 # Vertical elements
+helem = 16 # Horizontal elements
+npoly = 3 # Polynomial order
+
+center_space, face_space = test_spaces(FT; velem, helem, npoly)
 surface_space = Spaces.level(face_space, half)
 
 seed!(1) # ensures reproducibility
