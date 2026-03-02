@@ -5,6 +5,10 @@
 #SBATCH --nodes=1
 #SBATCH --gres=gpu:1
 #SBATCH --time=02:00:00
+#
+# NOTE: This script must be run from the root of the repository!
+#       It relies on some hardcoded relative paths.
+#       e.g. submit with `sbatch scripts/run-ncu-csd3.sh`
 
 set -euo pipefail
 
