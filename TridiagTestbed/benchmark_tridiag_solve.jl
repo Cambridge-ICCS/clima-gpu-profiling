@@ -3,6 +3,10 @@
 """
 
 using Pkg
+using CUDA
+using ClimaComms
+using ClimaCore
+using BenchmarkTools
 
 redirect_stderr(IOContext(stderr, :stacktrace_types_limited => Ref(true)))
 
@@ -178,6 +182,29 @@ function test_field_matrix_solver(; test_name, alg, A, b, use_rel_error = false)
     # end
 end
 
+
+function benchmark_tridiagonal_solver(solver_function, A, b; case_name, cache = nothing)
+    x = similar(b)
+    @info "Name: $case_name"
+    @info "BenchmarkTools run"
+    # There is another `@benchmark` macro from the test utils... we need to be explicit about module
+    benchmark_result =
+        BenchmarkTools.@benchmark CUDA.@sync $solver_function($cache, $x, $A, $b)
+    display(benchmark_result)
+
+
+    @info "CUDA-timed/profiled run"
+    # Warmup 'compilation run`, should not trigger anything after `@benchmark` run
+    CUDA.@time solver_function(cache, x, A, b)
+
+    # Clean the result space
+    x = similar(b)
+    gpu_time = CUDA.@elapsed CUDA.@profile external=true solver_function(cache, x, A, b)
+
+    @info "Name: $case_name, gpu_time: $gpu_time [s], size: $(size(parent(A)))"
+end
+
+
 #############################################################
 # Benchmarking of tridiagonal matrix solver
 
@@ -205,47 +232,20 @@ sfc_vec = random_field(FT, surface_space)
 ᶜᶜmat3 = random_field(TridiagonalMatrixRow{FT}, center_space) ./ λ .+ (I,)
 ᶠᶠmat3 = random_field(TridiagonalMatrixRow{FT}, face_space) ./ λ .+ (I,)
 
-for (vector, matrix, string1, string2) in (
-    (ᶜvec, ᶜᶜmat3, "tri-diagonal matrix", "cell centers"),
-    (ᶠvec, ᶠᶠmat3, "tri-diagonal matrix", "cell faces"),
+# Realistic 'block matrix' case for full solver
+#A, b = dycore_prognostic_EDMF_FieldMatrix(FT, center_space, face_space)
+
+# We need to pick functions from the extension module
+# Make it avaliable
+ClimaCoreCUDAExt = Base.get_extension(ClimaCore, :ClimaCoreCUDAExt)
+
+benchmark_tridiagonal_solver(
+    (cache, x, A, b) ->
+        ClimaCoreCUDAExt._single_field_solve!(ClimaComms.device(), cache, x, A, b),
+    ᶜᶜmat3,
+    ᶜvec;
+    case_name = "Baseline (local mem Thomas alg)",
+    # Cache is not used... but is touched (unpacked)
+    # We need to provide it
+    cache = ClimaCore.MatrixFields.single_field_solver_cache(ᶜᶜmat3, ᶜvec),
 )
-    test_field_matrix_solver(;
-        test_name = "$string1 solve on $string2",
-        alg = MatrixFields.BlockDiagonalSolve(),
-        A = MatrixFields.FieldMatrix((@name(_), @name(_)) => matrix),
-        b = Fields.FieldVector(; _ = vector),
-    )
-end
-
-# Test a more complex FieldMatrix similar to that used in ClimaAtmos's
-# dycore + prognostic, EDMF + prognostic surface temperature solve.
-A, b = dycore_prognostic_EDMF_FieldMatrix(FT, center_space, face_space)
-
-keyname = keys(A).values[1]
-keyname1 = @name(var1)
-
-A1 = MatrixFields.FieldMatrix((keyname1, keyname1) => A[keyname])
-b1_entry = MatrixFields.get_field(b, keyname[1])
-b1 = Fields.FieldVector(; var1 = b1_entry)
-
-test_field_matrix_solver(;
-    test_name = "Dycore + prognostic, EDMF + prognostic surface temperature \
-                 solve",
-    alg = MatrixFields.BlockDiagonalSolve(),
-    A = A1,
-    b = b1,
-)
-
-
-# Test batched tri-diagonal solver
-for (vector, matrix, string1, string2) in (
-    (ᶜvec, ᶜᶜmat3, "tri-diagonal matrix", "cell centers"),
-    (ᶠvec, ᶠᶠmat3, "tri-diagonal matrix", "cell faces"),
-)
-    test_field_matrix_solver(;
-        test_name = "Batched $string1 solve on $string2",
-        alg = MatrixFields.BatchedTridiagonalSolve(),
-        A = MatrixFields.FieldMatrix((@name(_), @name(_)) => matrix),
-        b = Fields.FieldVector(; _ = vector),
-    )
-end
