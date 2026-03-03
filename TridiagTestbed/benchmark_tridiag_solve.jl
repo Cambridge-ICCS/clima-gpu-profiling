@@ -210,7 +210,7 @@ end
 
 
 # @testset "FieldMatrixSolver Unit Tests" begin
-FT = Float64
+FT = Float32
 
 velem = 63 # Vertical elements
 helem = 16 # Horizontal elements
