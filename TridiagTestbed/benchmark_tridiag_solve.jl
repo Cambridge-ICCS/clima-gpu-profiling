@@ -4,6 +4,7 @@
 
 using Pkg
 
+redirect_stderr(IOContext(stderr, :stacktrace_types_limited => Ref(true)))
 
 # Figure out which project is currently activated
 project_dir = dirname(Base.active_project())
