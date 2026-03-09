@@ -241,11 +241,11 @@ ClimaCoreCUDAExt = Base.get_extension(ClimaCore, :ClimaCoreCUDAExt)
 
 benchmark_tridiagonal_solver(
     (cache, x, A, b) ->
-        ClimaCoreCUDAExt._single_field_solve!(ClimaComms.device(), cache, x, A, b),
+        ClimaCoreCUDAExt.single_field_solve!(ClimaComms.device(), cache, x, A, b),
     ᶜᶜmat3,
     ᶜvec;
-    case_name = "Baseline (local mem Thomas alg)",
+    case_name="Baseline (local mem Thomas alg)",
     # Cache is not used... but is touched (unpacked)
     # We need to provide it
-    cache = ClimaCore.MatrixFields.single_field_solver_cache(ᶜᶜmat3, ᶜvec),
+    cache=ClimaCore.MatrixFields.single_field_solver_cache(ᶜᶜmat3, ᶜvec),
 )
