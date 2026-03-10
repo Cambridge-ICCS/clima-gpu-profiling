@@ -8,6 +8,12 @@ using ClimaComms
 using ClimaCore
 using BenchmarkTools
 
+import ClimaCore.Fields
+import ClimaCore.DataLayouts
+using LinearAlgebra: Tridiagonal
+using Statistics: mean
+
+
 redirect_stderr(IOContext(stderr, :stacktrace_types_limited => Ref(true)))
 
 # Figure out which project is currently activated
@@ -139,6 +145,27 @@ function dycore_prognostic_EDMF_FieldMatrix(
 end
 
 
+"""
+    ulp_distance(a,b)
+
+Calculates the absolute error between `a` and `b` in the units of ulp(b)
+If b is power of two then the ulp is computed in the direction of a.
+
+Return Inf for not finite numbers.
+
+We return a Float since the ulp distance may not be an integer when
+they a and b are in diffrent binades.
+"""
+function ulp_distance(a::FT, b::FT) where {FT<:Base.IEEEFloat}
+    if !isfinite(a) || !isfinite(b)
+        return Inf
+    end
+    # ulp_b is always exact by Sterbenz Lemma
+    ulp_b = a < b ? b - prevfloat(b) : nextfloat(b) - b
+    return abs(a - b) / ulp_b
+end
+
+
 function test_field_matrix_solver(; test_name, alg, A, b, use_rel_error = false)
     # @testset "$test_name" begin
     x = similar(b)
@@ -183,7 +210,62 @@ function test_field_matrix_solver(; test_name, alg, A, b, use_rel_error = false)
 end
 
 
-function benchmark_tridiagonal_solver(solver_function, A, b; case_name, cache = nothing)
+
+function reference_solve(A, b; reference_precision = BigFloat)
+    # Unpack matrix field into matrix
+    Ni, Nj, _, _, Nh = DataLayouts.universal_size(Fields.field_values(A))
+    n_batch = Ni * Nj * Nh
+
+    # I presume a number of vertical levels
+    # TODO: I think we should be able to read it from the Universal size
+    Nv = DataLayouts.nlevels(Fields.field_values(A))
+
+    # Construct host-based tridiagonal matrix
+    # Why off diagonals still have size 63?
+    Am1, A0, A1 =
+        ClimaCore.MatrixFields.unzip_tuple_field_values(Fields.field_values(A.entries))
+
+
+    Am1 = reshape(parent(Am1), Nv, n_batch)
+    A0 = reshape(parent(A0), Nv, n_batch)
+    A1 = reshape(parent(A1), Nv, n_batch)
+    b_flat = reshape(parent(Fields.field_values(b)), Nv, n_batch)
+
+    # Host based result Matrix
+    x = Matrix(similar(b_flat))
+
+    FT = reference_precision
+
+    for j = 1:n_batch
+        v_Am1 = Vector{FT}(Am1[2:end, j])
+        v_A0 = Vector{FT}(A0[:, j])
+        v_A1 = Vector{FT}(A1[1:(end-1), j])
+        v_b = Vector{FT}(b_flat[:, j])
+
+        A_tridiag = Tridiagonal(v_Am1, v_A0, v_A1)
+
+        # Converst back to the element precision
+        x[:, j] = A_tridiag \ v_b
+    end
+
+    return x
+end
+
+
+"""
+Benchmark a tridiagonal solver function on the GPU and compare to a reference solution.
+
+Return the solutions from the function so they can be easiliy inspected in case
+the errors a re high.
+"""
+function benchmark_tridiagonal_solver(
+    solver_function,
+    A,
+    b;
+    case_name,
+    cache = nothing,
+    reference_precision = BigFloat,
+)
     x = similar(b)
     @info "Name: $case_name"
     @info "BenchmarkTools run"
@@ -199,9 +281,28 @@ function benchmark_tridiagonal_solver(solver_function, A, b; case_name, cache = 
 
     # Clean the result space
     x = similar(b)
-    gpu_time = CUDA.@elapsed CUDA.@profile external=true solver_function(cache, x, A, b)
+    gpu_time = CUDA.@elapsed CUDA.@profile external = true solver_function(cache, x, A, b)
+
+    # Flatten the solution along the horizontal columns to match
+    # the reference solution shape
+    x_flat_host = begin
+        Ni, Nj, _, _, Nh = DataLayouts.universal_size(Fields.field_values(A))
+        n_batch = Ni * Nj * Nh
+        Nv = DataLayouts.nlevels(Fields.field_values(A))
+        Matrix(reshape(parent(Fields.field_values(x)), Nv, n_batch))
+    end
+
+    # Verify accuracy of the result
+    x_ref = reference_solve(A, b; reference_precision)
+
+    ulp_error = ulp_distance.(x_flat_host, x_ref)
+    max_ulp_error = maximum(ulp_error)
+    mean_ulp_error = mean(ulp_error)
+
 
     @info "Name: $case_name, gpu_time: $gpu_time [s], size: $(size(parent(A)))"
+    @info "Max ULP error: $max_ulp_error, Mean ULP error: $mean_ulp_error"
+    return x_flat_host, x_ref
 end
 
 
@@ -219,6 +320,8 @@ npoly = 3 # Polynomial order
 center_space, face_space = test_spaces(FT; velem, helem, npoly)
 surface_space = Spaces.level(face_space, half)
 
+# Note that the sequence is not type stable!
+# If you change FT type you get basically independent samples
 seed!(1) # ensures reproducibility
 
 ᶜvec = random_field(FT, center_space)
@@ -239,13 +342,14 @@ sfc_vec = random_field(FT, surface_space)
 # Make it avaliable
 ClimaCoreCUDAExt = Base.get_extension(ClimaCore, :ClimaCoreCUDAExt)
 
-benchmark_tridiagonal_solver(
+x_sol, x_ref = benchmark_tridiagonal_solver(
     (cache, x, A, b) ->
         ClimaCoreCUDAExt.single_field_solve!(ClimaComms.device(), cache, x, A, b),
     ᶜᶜmat3,
     ᶜvec;
-    case_name="Baseline (local mem Thomas alg)",
+    case_name = "Baseline (local mem Thomas alg)",
     # Cache is not used... but is touched (unpacked)
     # We need to provide it
-    cache=ClimaCore.MatrixFields.single_field_solver_cache(ᶜᶜmat3, ᶜvec),
+    cache = ClimaCore.MatrixFields.single_field_solver_cache(ᶜᶜmat3, ᶜvec),
+    reference_precision = FT,
 )
