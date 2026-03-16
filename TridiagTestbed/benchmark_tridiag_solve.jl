@@ -10,7 +10,7 @@ using BenchmarkTools
 
 import ClimaCore.Fields
 import ClimaCore.DataLayouts
-using LinearAlgebra: Tridiagonal
+using LinearAlgebra: Tridiagonal, norm
 using Statistics: mean
 
 
@@ -298,9 +298,11 @@ function benchmark_tridiagonal_solver(
     max_ulp_error = maximum(ulp_error)
     mean_ulp_error = mean(ulp_error)
 
+    l2_error = norm(x_flat_host - x_ref)
 
     @info "Name: $case_name, gpu_time: $gpu_time [s], size: $(size(parent(A)))"
     @info "Max ULP error: $max_ulp_error, Mean ULP error: $mean_ulp_error"
+    @info "L2 error: $l2_error"
     return x_flat_host, x_ref
 end
 
