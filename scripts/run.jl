@@ -1,6 +1,8 @@
 # Run the benchmark
 import CUDA
 
+import ClimaCoupler.Input: parse_commandline, argparse_settings
+
 # Figure out which project is currently activated and include the setup
 # script
 project_dir = dirname(Base.active_project())
