@@ -14,6 +14,17 @@ const clima_earth_path =
     joinpath(@__DIR__, "..", "ClimaCoupler.jl", "experiments", "ClimaEarth")
 const root_dir = joinpath(@__DIR__, "..")
 
+
+function develop_package(path)
+    # The `develop` in most cases will significantly modify the existing Manifest
+    # The default behaviour: "PRESERVE_TIERED" should try to make MINIMUM changes to satisfy
+    # the requirements.
+    # This is probably sensible default, but if you don't want to change the Manifest
+    # switch to PRESERVE_ALL below or ny appropriate option as listed in the documentation:
+    # https://pkgdocs.julialang.org/v1/api/#Pkg.add
+    Pkg.develop(path = path, preserve=PRESERVE_TIERED)
+end
+
 # We separate package path from Package name since they may (and are different)
 # One reason is the `.jl` suffix, but renaming may be expected as well;
 function make_package_track_path(package_name, package_path)
@@ -31,7 +42,7 @@ function make_package_track_path(package_name, package_path)
     if !package_info.is_tracking_path
         # Make it track the path
         @info "Package '$package_name' was not tracking a path. Making it track '$abs_package_path'."
-        Pkg.develop(path = abs_package_path)
+        develop_package(abs_package_path)
         return
     end
 
@@ -42,7 +53,7 @@ function make_package_track_path(package_name, package_path)
 
     if !samefile(package_path_in_env, abs_package_path)
         @info "Package '$package_name' was tracking a different path: '$package_path_in_env'. Making it track '$abs_package_path'."
-        Pkg.develop(path = abs_package_path)
+        develop_package(abs_package_path)
     end
 end
 
