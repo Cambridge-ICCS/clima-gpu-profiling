@@ -354,3 +354,25 @@ x_sol, x_ref = benchmark_tridiagonal_solver(
     cache = ClimaCore.MatrixFields.single_field_solver_cache(ᶜᶜmat3, ᶜvec),
     reference_precision = FT,
 )
+
+# Tensor argument testcase
+#
+# NOTE:
+#   The reference calculation assumes a scalar b_tensor so we can have only one 
+#   field in the tuple
+e³ = Geometry.Covariant3Vector(FT(1))
+e₃ = Geometry.Contravariant3Vector(FT(1))
+ᶠᶠmat3_u₃_u₃ = ᶠᶠmat3 .* (e³ * e₃',)
+b_tensor = ᶠvec .* ((; u₃ = e³ ),)
+
+x_sol, x_ref = benchmark_tridiagonal_solver(
+    (cache, x, A, b) ->
+        ClimaCoreCUDAExt.single_field_solve!(ClimaComms.device(), cache, x, A, b),
+    ᶠᶠmat3_u₃_u₃,
+    b_tensor;
+    case_name = "Baseline (local mem Thomas alg) - tensor-valued u₃-u₃",
+    cache = ClimaCore.MatrixFields.single_field_solver_cache(ᶠᶠmat3_u₃_u₃, b_tensor),
+    reference_precision = FT,
+)
+
+
