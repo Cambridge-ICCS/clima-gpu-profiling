@@ -6,4 +6,4 @@
 	url = https://github.com/CliMA/ClimaAtmos.jl.git
 [submodule "ClimaCore.jl"]
 	path = ClimaCore.jl
-	url = https://github.com/Cambridge-ICCS/ClimaCore.jl.git
+	url = git@github.com:CliMA/ClimaCore.jl.git
