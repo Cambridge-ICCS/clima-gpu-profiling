@@ -20,7 +20,7 @@ CLIMA_COUPLER=ClimaCoupler.jl
 RUN_NAME=baseline
 OUTPUT_DIR=results/PCR-AMIP
 
-PROJECT_DIR=$CLIMA_COUPLER/experiments/ClimaEarth
+PROJECT_DIR=$CLIMA_COUPLER/experiments/AMIP
 
 AMIP_CONFIG=$CLIMA_COUPLER/config/benchmark_configs/amip_progedmf_1m_land_he16.yml
 ATMOS_CONFIG=$CLIMA_COUPLER/config/atmos_configs/climaatmos_progedmf_1m.yml
