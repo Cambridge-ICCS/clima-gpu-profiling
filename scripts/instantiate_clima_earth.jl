@@ -11,7 +11,7 @@ using UUIDs
 
 # constants
 const clima_earth_path =
-    joinpath(@__DIR__, "..", "ClimaCoupler.jl", "experiments", "ClimaEarth")
+    joinpath(@__DIR__, "..", "ClimaCoupler.jl", "experiments", "AMIP")
 const root_dir = joinpath(@__DIR__, "..")
 
 
