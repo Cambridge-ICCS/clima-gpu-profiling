@@ -5,11 +5,12 @@
 #SBATCH --time=2:00:00
 
 set -euo pipefail
+
 CLIMA_COUPLER=ClimaCoupler.jl
 RUN_NAME=baseline
 OUTPUT_DIR=results/AMIP_RUNS
 
-PROJECT_DIR=$CLIMA_COUPLER/experiments/ClimaEarth
+PROJECT_DIR=$CLIMA_COUPLER/experiments/AMIP
 CONFIG_FILE=$CLIMA_COUPLER/config/benchmark_configs/amip_progedmf_1m_land_he16.yml
 
 # Ensure the output prefix parent directory exists
