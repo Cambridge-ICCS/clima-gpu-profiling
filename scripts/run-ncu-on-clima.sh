@@ -4,14 +4,15 @@
 #SBATCH --gpus=1
 #SBATCH --time=2:00:00
 
-set -euo pipefail`
+set -euo pipefail
+
 KERNEL=run_field_matrix_solver
 MAX_NUM_KERNELS=10
 CLIMA_COUPLER=ClimaCoupler.jl
 RUN_NAME=baseline
 OUTPUT_DIR=results/PCR-AMIP/$KERNEL
 
-PROJECT_DIR=$CLIMA_COUPLER/experiments/ClimaEarth
+PROJECT_DIR=$CLIMA_COUPLER/experiments/AMIP
 CONFIG_FILE=$CLIMA_COUPLER/config/benchmark_configs/amip_progedmf_1m_land_he16.yml
 
 # Ensure the output prefix parent directory exists
