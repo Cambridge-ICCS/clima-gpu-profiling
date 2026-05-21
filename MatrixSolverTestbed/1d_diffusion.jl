@@ -12,6 +12,8 @@ using LazyBroadcast
 import ClimaCore.MatrixFields: @name
 import LinearAlgebra: ldiv!
 
+redirect_stderr(IOContext(stderr, :stacktrace_types_limited => Ref(true)))
+
 @show ClimaComms.device()
 CUDA.allowscalar(true)
 
