@@ -1,0 +1,10 @@
+[deps]
+BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
+BlockArrays = "8e7c35d0-a365-5155-bbbb-fb81a777f24e"
+CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
+ClimaComms = "3a4d1b5c-c61d-41fd-a00a-5873ba7a1b0d"
+ClimaCore = "d414da3d-4745-48bb-8d80-42e94e092884"
+LazyBroadcast = "9dccce8e-a116-406d-9fcc-a88ed4f510c8"
+
+[sources]
+ClimaCore = {path = "../ClimaCore.jl"}
