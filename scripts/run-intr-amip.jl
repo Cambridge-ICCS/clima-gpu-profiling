@@ -1,6 +1,6 @@
 #= This version of the `run.jl` is intended to be used interactivly
 
- Just invoke it with `julia -i ./scripts/run_intr.jl`
+ Just invoke it with `julia -i ./scripts/run-intr-amip.jl`
  and it will: 
   1) move to the AMIP environment
   2) load the right config file 
