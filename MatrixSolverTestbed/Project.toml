@@ -5,6 +5,8 @@ CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
 ClimaComms = "3a4d1b5c-c61d-41fd-a00a-5873ba7a1b0d"
 ClimaCore = "d414da3d-4745-48bb-8d80-42e94e092884"
 LazyBroadcast = "9dccce8e-a116-406d-9fcc-a88ed4f510c8"
+PrettyBroadcastTree = "6047ec4b-8f61-4068-a31e-c0fa98a6076d"
 
 [sources]
 ClimaCore = {path = "../ClimaCore.jl"}
+PrettyBroadcastTree = {path = "../PrettyBroadcastTree"}
